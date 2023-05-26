@@ -1,5 +1,11 @@
-/-  *forms-states, *forms
-/+  default-agent, dbug, upgrade, fl=forms
+/-  *forms-states,
+    *forms
+/+  default-agent,
+    dbug,
+    fl=forms,
+    rudder,
+    upgrade
+/~  pages-overview  (page:rudder state-1 action)  /app/forms/webui
 |%
 +$  card  card:agent:gall
 --
@@ -11,12 +17,32 @@
 +*  this  .
     def   ~(. (default-agent this %.n) bowl)
 ::
-++  on-arvo   on-arvo:def
+++  on-arvo
+  |=  [wir=wire sig=sign-arvo]
+  ^-  (quip card _this)
+  ?:  =(wir /apps/forms/cast)  ::  handle the response from posting
+    ?>  ?=([%iris %http-response %finished * ~ *] sig)
+    =/  res=json  (need (de-json:html q.data.u.full-file.client-response.sig))
+    ?>  ?=(%o -.res)
+    =/  redirect-url  (~(got by p.res) %url)
+    ?>  ?=(%s -.redirect-url)
+    =/  wirr  [/http-response/[&2.wir]]~
+    =/  =response-header:http
+      ^-  response-header:http
+      :-  200  ~
+    :_  this
+    :~  [%give %fact wirr %http-response-header !>(response-header)]
+        [%give %fact wirr %http-response-data !>(~)]
+        [%give %kick wirr ~]
+    ==
+  `this
 ++  on-fail   on-fail:def
 ++  on-leave  on-leave:def
 ++  on-init
   ^-  (quip card _this)
-  `this(slug-store (~(put by slug-store) our.bowl *slugs))
+  :_  this(slug-store (~(put by slug-store) our.bowl *slugs))
+  :~  [%pass /eyre/connect %arvo %e %connect [~ /[dap.bowl]] dap.bowl]
+  ==
 ::
 ++  on-save
   ^-  vase
@@ -35,13 +61,17 @@
   |=  =path
   ^-  (quip card _this)
   ?+  path  (on-watch:def path)
-      [%header %all ~]
+      [%http-response *]
+    %-  (slog leaf+"Eyre subscribed to {(spud path)}." ~)
+    [~ this]
+    ::
+      [%headers %all ~]
     :_  this
     ~[give+fact+`forms-cmd+!>(`cmd`(frond:enjs:format ['flag' s+'refresh']))]
     ::
       [%survey @ ~]
     =/  id=survey-id   (slav %ud i.t.path)
-    =+  m=(got:header-orm:fl header id)
+    =+  m=(got:header-orm:fl headers id)
     ?>  =(%public visibility.m)
     =+  s=(got:stuffing-orm:fl stuffing id)
     :_  this(subscribers (add-subs:fl subscribers id src.bowl))
@@ -55,12 +85,12 @@
   |=  =path
   ^-  (unit (unit cage))
   ?+    path  (on-peek:def path)
-      [%x %header ~]
-    ``forms-json+!>(`frontend`header+header)
+      [%x %headers ~]
+    ``forms-json+!>(`frontend`header+headers)
       [%x %active @ @ ~]
     =+  g=(~(got by slug-store) (slav %p i.t.t.path))
     =+  id=(~(got by g) i.t.t.t.path)
-    =+  m=(got:header-orm:fl header id)
+    =+  m=(got:header-orm:fl headers id)
     =+  s=(got:stuffing-orm:fl stuffing id)
     =+  sb=(got:submissions-orm:fl submissions id)
     =+  d=sections:(got:responses-1-orm:fl sb %draft)
@@ -90,7 +120,21 @@
     =^  cards  state
       (handle-edit !<(edit vase))
     [cards this]
-
+    ::
+      %handle-http-request
+    =;  out=(quip card _state)
+      [-.out this(state +.out)]
+    %.  [bowl !<(order:rudder vase) state]
+    %-  (steer:rudder _state action)
+    :^    pages-overview
+        (point:rudder /[dap.bowl] & ~(key by pages-overview))
+      (fours:rudder state)
+    |=  axn=action
+    ^-  $@  brief:rudder
+        [brief:rudder (list card) _state]
+    =^  caz  this
+      (on-poke %forms-action !>(axn))
+    ['Processed succesfully.' caz state]
   ==
   ++  handle-action
     |=  act=action
@@ -105,7 +149,7 @@
       =+  m=(create-metadata-1:fl act our.bowl now.bowl)
       =+  g=(~(put by sl) slug.act id)
       =+  gg=(~(put by slug-store) our.bowl g)
-      =+  h=(put:header-orm:fl header id m)
+      =+  h=(put:header-orm:fl headers id m)
       =+  sc=(put:section-orm:fl *section 1 *question-1)
       =+  ss=(put:sections-orm:fl *sections 1 *section)
       =+  st=(put:stuffing-orm:fl stuffing id ss)
@@ -116,11 +160,11 @@
       =+  sm=(put:submissions-orm:fl submissions id rs)
       :-  
       :~  :*
-        %give  %fact  ~[/header/all]
+        %give  %fact  ~[/headers/all]
         %forms-cmd  !>
         `cmd`(pairs ~[['flag' s+'ask'] ['id' s+(scot %ud id)]])
       ==  ==
-      state(header h, slug-store gg, stuffing st, subscribers sb, submissions sm)
+      state(headers h, slug-store gg, stuffing st, subscribers sb, submissions sm)
         ::
         %ask
       :_  state(pending (~(put in pending) [author.act slug.act]))
@@ -131,15 +175,15 @@
       ==  ==
         ::
         %delete
-      =+  m=(got:header-orm:fl header survey-id.act)
-      =+  h=+:(del:header-orm:fl header survey-id.act)
+      =+  m=(got:header-orm:fl headers survey-id.act)
+      =+  h=+:(del:header-orm:fl headers survey-id.act)
       =+  s=+:(del:stuffing-orm:fl stuffing survey-id.act)
       =+  sb=+:(del:submissions-orm:fl submissions survey-id.act)
       =+  sl=(~(got by slug-store) our.bowl)
       =+  g=(~(del by sl) slug.m)
       =+  gg=(~(put by slug-store) our.bowl g)
       ?.  =(our.bowl author.m)
-        :_  state(header h, stuffing s, submissions sb, slug-store gg)
+        :_  state(headers h, stuffing s, submissions sb, slug-store gg)
         :~  :*
           %pass   /updates/(scot %ud survey-id.act)
           %agent  [author.m %forms]
@@ -148,11 +192,11 @@
         =+  sr=(~(get by subscribers) survey-id.act)
         =+  sd=(~(del by subscribers) survey-id.act)
         ?~  sr
-          `state(header h, stuffing s, submissions sb, slug-store gg)
+          `state(headers h, stuffing s, submissions sb, slug-store gg)
         =+  sn=~(tap in (need sr))
         ?~  sn
-          `state(header h, stuffing s, submissions sb, slug-store gg, subscribers sd)
-        :_  state(header h, stuffing s, submissions sb, slug-store gg, subscribers sd)
+          `state(headers h, stuffing s, submissions sb, slug-store gg, subscribers sd)
+        :_  state(headers h, stuffing s, submissions sb, slug-store gg, subscribers sd)
         (turn sn |=(a=@p [%give %kick ~[/survey/(scot %ud survey-id.act)] `a]))
         ::
         %editdraft
@@ -178,7 +222,7 @@
         =+  id=(make-response-id:fl now.bowl our.bowl survey-id.act) 
         =+  ss=(~(put by sb) id rs)
         =+  sn=(~(put by ss) %draft [our.bowl *sections])
-        =+  survey-author=author:(got:header-orm:fl header survey-id.act)
+        =+  survey-author=author:(got:header-orm:fl headers survey-id.act)
         :_  state(submissions (put:submissions-orm:fl submissions survey-id.act sn))
         :~  :*
           %pass   /submit
@@ -198,7 +242,7 @@
     |=  ed=edit
     ^-  (quip card _state)
     ?>  =(src our):bowl
-    =+  m=(got:header-orm:fl header survey-id.ed)
+    =+  m=(got:header-orm:fl headers survey-id.ed)
     =.  updated.m
       now.bowl
     ?-  -.ed
@@ -208,8 +252,8 @@
       =+  sn=(put:stuffing-orm:fl stuffing survey-id.ed sc)
       =.  s.size.m
         +(s.size.m)
-      =+  h=(put:header-orm:fl header survey-id.ed m)
-      :_  state(header h, stuffing sn)
+      =+  h=(put:header-orm:fl headers survey-id.ed m)
+      :_  state(headers h, stuffing sn)
       :~  :*
         %give  %fact  [/survey/(scot %ud survey-id.ed) ~]
         %forms-update  !>  `update`meta+m
@@ -229,8 +273,8 @@
         =.  s.size.m
           (dec sid)
         =+  sn=(put:stuffing-orm:fl stuffing survey-id.ed st)
-        =+  h=(put:header-orm:fl header survey-id.ed m)
-        :_  state(stuffing sn, header h)
+        =+  h=(put:header-orm:fl headers survey-id.ed m)
+        :_  state(stuffing sn, headers h)
         :~  :*
           %give  %fact  [/survey/(scot %ud survey-id.ed) ~]
           %forms-update  !>  `update`meta+m
@@ -247,8 +291,8 @@
       =.  s.size.m
         (dec sid)
       =+  sn=(put:stuffing-orm:fl stuffing survey-id.ed st)
-      =+  h=(put:header-orm:fl header survey-id.ed m)
-      :_  state(stuffing sn, header h)
+      =+  h=(put:header-orm:fl headers survey-id.ed m)
+      :_  state(stuffing sn, headers h)
       :~  :*
         %give  %fact  [/survey/(scot %ud survey-id.ed) ~]
         %forms-update  !>  `update`meta+m
@@ -267,8 +311,8 @@
         =+  sn=+:(del:section-orm:fl sc question-id.ed)
         =+  ss=(put:sections-orm:fl so section-id.ed sn)
         =+  st=(put:stuffing-orm:fl stuffing survey-id.ed ss)
-        =+  h=(put:header-orm:fl header survey-id.ed m)
-        :_  state(header h, stuffing st)
+        =+  h=(put:header-orm:fl headers survey-id.ed m)
+        :_  state(headers h, stuffing st)
         :~  :*
           %give  %fact  [/survey/(scot %ud survey-id.ed) ~]
           %forms-update  !>  `update`meta+m
@@ -285,8 +329,8 @@
       =+  sn=+:(del:section-orm:fl sc qid)
       =+  ss=(put:sections-orm:fl so section-id.ed sn)
       =+  st=(put:stuffing-orm:fl stuffing survey-id.ed ss)
-      =+  h=(put:header-orm:fl header survey-id.ed m)
-      :_  state(header h, stuffing st)
+      =+  h=(put:header-orm:fl headers survey-id.ed m)
+      :_  state(headers h, stuffing st)
       :~  :*
         %give  %fact  [/survey/(scot %ud survey-id.ed) ~]
         %forms-update  !>  `update`meta+m
@@ -308,8 +352,8 @@
               q.size.m
             (dec section-id.ed)
           +((lent (tap:section-orm:fl sc)))
-        =+  h=(put:header-orm:fl header survey-id.ed m)
-        :_  state(header h, stuffing st)
+        =+  h=(put:header-orm:fl headers survey-id.ed m)
+        :_  state(headers h, stuffing st)
         :~  :*
           %give  %fact  [/survey/(scot %ud survey-id.ed) ~]
           %forms-update  !>  `update`meta+m
@@ -317,8 +361,8 @@
           %give  %fact  [/survey/(scot %ud survey-id.ed) ~]
           %forms-update  !>  `update`secs+sn
         ==  ==
-      =+  h=(put:header-orm:fl header survey-id.ed m)
-      :_  state(header h, stuffing st)
+      =+  h=(put:header-orm:fl headers survey-id.ed m)
+      :_  state(headers h, stuffing st)
       :~  :*
         %give  %fact  [/survey/(scot %ud survey-id.ed) ~]
         %forms-update  !>  `update`meta+m
@@ -330,8 +374,8 @@
         %title
       =.  title.m
         title.ed
-      =+  h=(put:header-orm:fl header survey-id.ed m)
-      :_  state(header h)
+      =+  h=(put:header-orm:fl headers survey-id.ed m)
+      :_  state(headers h)
       :~  :*
         %give  %fact  [/survey/(scot %ud survey-id.ed) ~]
         %forms-update  !>  `update`meta+m
@@ -340,8 +384,8 @@
         %description
       =.  description.m
         description.ed
-      =+  h=(put:header-orm:fl header survey-id.ed m)
-      :_  state(header h)
+      =+  h=(put:header-orm:fl headers survey-id.ed m)
+      :_  state(headers h)
       :~  :*
         %give  %fact  [/survey/(scot %ud survey-id.ed) ~]
         %forms-update  !>  `update`meta+m
@@ -350,8 +394,8 @@
         %rlimit
       =.  rlimit.m
         rlimit.ed
-      =+  h=(put:header-orm:fl header survey-id.ed m)
-      :_  state(header h)
+      =+  h=(put:header-orm:fl headers survey-id.ed m)
+      :_  state(headers h)
       :~  :*
         %give  %fact  [/survey/(scot %ud survey-id.ed) ~]
         %forms-update  !>  `update`meta+m
@@ -362,10 +406,10 @@
       =+  e=(~(del by sl) slug.m)
       =.  slug.m
         slug.ed
-      =+  h=(put:header-orm:fl header survey-id.ed m)
+      =+  h=(put:header-orm:fl headers survey-id.ed m)
       =+  g=(~(put by e) slug.ed survey-id.ed)
       =+  gg=(~(put by slug-store) our.bowl g)
-      :_  state(header h, slug-store gg)
+      :_  state(headers h, slug-store gg)
       :~  :*
         %give  %fact  [/survey/(scot %ud survey-id.ed) ~]
         %forms-update  !>  `update`meta+m
@@ -374,16 +418,16 @@
         %visibility
       =.  visibility.m
         visibility.ed
-      =+  h=(put:header-orm:fl header survey-id.ed m)
+      =+  h=(put:header-orm:fl headers survey-id.ed m)
       ?.  =(%private visibility.ed)
-        :_  state(header h)
+        :_  state(headers h)
         :~  :*
           %give  %fact  [/survey/(scot %ud survey-id.ed) ~]
           %forms-update  !>  `update`meta+m
         ==  ==
       =+  s=~(tap in (~(got by subscribers) survey-id.ed))
       =+  ns=(~(put by subscribers) survey-id.ed *ships)
-      :_  state(header h, subscribers ns)
+      :_  state(headers h, subscribers ns)
       ?:  =(0 (lent s))  ~
       (turn s |=(a=@p [%give %kick ~[/survey/(scot %ud survey-id.ed)] `a]))
     ==
@@ -402,7 +446,7 @@
         %poke   %forms-request  !>
         ?~  id  
           fail+slug.req  
-          ?:  =(%public visibility:(got:header-orm:fl header (need id)))
+          ?:  =(%public visibility:(got:header-orm:fl headers (need id)))
             id+[slug.req (need id)]
           fail+slug.req  
         ==  ==
@@ -411,7 +455,7 @@
       %-  (slog leaf+"forms doesn't exist!" ~)
       :-
       :~  :*
-        %give  %fact  ~[/header/all]
+        %give  %fact  ~[/headers/all]
         %forms-cmd  !>
         `cmd`(pairs:enjs:format ~[['flag' s+'requested'] ['status' s+'fail']])
       ==  ==
@@ -425,7 +469,7 @@
       =+  gg=(~(put by slug-store) src.bowl s)
       :_  state(pending p, slug-store gg)
       :~  :*
-        %give  %fact  ~[/header/all]
+        %give  %fact  ~[/headers/all]
         %forms-cmd  !>
         =,  enjs:format
         ^-  cmd
@@ -467,10 +511,10 @@
       ::
       %kick
       =+  id=(slav %ud i.t.wire)
-      =+  m=(got:header-orm:fl header id)
+      =+  m=(got:header-orm:fl headers id)
       =.  status.m  %archived
-      =+  h=(put:header-orm:fl header id m)
-      `this(header h)
+      =+  h=(put:header-orm:fl headers id m)
+      `this(headers h)
       ::
       %fact
       ?+  p.cage.sign  (on-agent:def wire sign)
@@ -479,8 +523,8 @@
         =+  upd=!<(update q.cage.sign)
         ?-  -.upd
             %meta
-            =+  h=(put:header-orm:fl header id metadata.upd)
-            `this(header h)
+            =+  h=(put:header-orm:fl headers id metadata.upd)
+            `this(headers h)
           ::
             %secs
             =+  s=(put:stuffing-orm:fl stuffing id sections.upd)
@@ -488,29 +532,29 @@
           ::
             %init
           =,  enjs:format
-          =+  h=(put:header-orm:fl header id metadata.upd)
+          =+  h=(put:header-orm:fl headers id metadata.upd)
           =+  s=(put:stuffing-orm:fl stuffing id sections.upd)
           =+  rc=(put:section-orm:fl *section 1 *answer-1)
           =+  rp=(put:sections-orm:fl *sections 1 *section)
           =+  rs=(~(put by *responses-1) %draft [our.bowl rp])
           =+  sm=(put:submissions-orm:fl submissions id rs)
-          :_  this(header h, stuffing s, submissions sm)
+          :_  this(headers h, stuffing s, submissions sm)
           :~  :*
-            %give  %fact  ~[/header/all]  %forms-cmd  
+            %give  %fact  ~[/headers/all]  %forms-cmd
             !>
             ^-  cmd
-            %-  pairs 
+            %-  pairs
             :~
               ['flag' s+'requested']
               ['status' s+'summon']
-              :-  'addr' 
+              :-  'addr'
               :-  %s
               %-  crip
               :(weld (trip (scot %p author.metadata.upd)) "/" (trip slug.metadata.upd))
             ==
           ==  ==
-        ==
-      ==
-    ==
-  ==
+        ==  :: forms-update
+      ==  :: fact
+    ==  :: sign
+  ==  :: wire
 --

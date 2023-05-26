@@ -19,7 +19,7 @@
   ::
   ++  metas-to-header
     |=  input=metas:zero
-    ^-  header:one
+    ^-  headers:one
     (~(urn by input) make-metadata-1)
   ::
   ++  make-metadata-1

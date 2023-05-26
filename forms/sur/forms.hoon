@@ -1,33 +1,44 @@
 |%
 ::
-::  Top Level
+::  Basic Types
 ::
-::::::+$  access  (map survey-id [restriction=?(%black %white) =ships])
-+$  slug-store   (map ship slugs)
-+$  pending      (set [author slug])
-+$  slugs        (map slug survey-id)
-+$  subscribers  (map survey-id ships)
++$  survey-id    @ud
++$  response-id  ?(@ud %draft)
++$  ships        (set ship)
++$  author       ship
++$  slug         @ta
++$  title        @t
++$  description  @t
++$  visibility   ?(%public %private %team %restricted)
++$  spawn        @da
++$  updated      @da
++$  rlimit       @ud
++$  status       ?(%archived %live)
++$  question-id  @ud
 ::
-::  header - previously metas
+::  State-Level Types
 ::
-+$  header  ((mop survey-id metadata-1) gth)
++$  slug-store   (map ship slugs)                       :: known surveys
++$  pending      (set [author slug])                    :: TODO ???
++$  slugs        (map slug survey-id)                   :: lookup table
++$  subscribers  (map survey-id ships)                  :: subscribers to survey
++$  headers  ((mop survey-id metadata-1) gth)
 +$  metadata-1
   $:  
-    =author
-    =status
-    =slug
-    =title
-    =description
-    =visibility
-    =spawn
-    =updated
-    =rlimit
-    =size
+    =author                                             :: authoring ship
+    =status                                             :: available or not
+    =slug                                               :: unique identifier
+    =title                                              :: form title
+    =description                                        :: form description
+    =visibility                                         :: scope
+    =spawn                                              :: release date
+    =updated                                            :: time of editing
+    =rlimit                                             :: number of responses
+    =size                                               :: TODO ???
   ==
 +$  size  [q=(list @ud) s=@ud]
-
 ::
-::  stuffing - previously content
+::  Content Types
 ::
 +$  stuffing  ((mop survey-id sections) gth)
 +$  sections  ((mop section-id section) lth)
@@ -66,22 +77,6 @@
 +$  datum  [a=(list @t) b=(list [@t @t]) c=(list [@t @t @t])]
 +$  survey  [=metadata-1 =sections]
 ::
-::  Basic Types
-::
-+$  survey-id    @ud
-+$  response-id  ?(@ud %draft)
-+$  ships        (set ship)
-+$  author       ship
-+$  slug         @ta
-+$  title        @t
-+$  description  @t
-+$  visibility   ?(%public %private %team %restricted)
-+$  spawn        @da
-+$  updated      @da
-+$  rlimit       @ud
-+$  status       ?(%archived %live)
-+$  question-id  @ud
-::
 ::  Edits
 ::
 +$  edit
@@ -107,6 +102,7 @@
     [%editdraft =survey-id =section-id =question-id =answer-1]
     submit
     [%delsubmission =survey-id =response-id]
+    :: TODO add ability to query all open surveys from author
   ==
 +$  ask     [%ask =author =slug]
 +$  create  [%create =title =description =visibility =slug =rlimit]
@@ -134,7 +130,7 @@
              ==
 +$  frontend  
   $%
-    [%header =header]
+    [%header =headers]
     [%responses =responses-1]
     [%active =survey-id metadata=metadata-1 =sections draft=sections]
   ==

@@ -1,7 +1,18 @@
 **This document is outdated.**
 
-# Urbit Forms
+#   Urbit Forms
 Create forms and surveys with multiple question types.
+
+##  Work List
+
+- [x] figure out backend
+- [~] add Rudder frontend
+  - [x] main page, list surveys, create/delete surveys
+  - [ ] editor page, add/remove questions and sections
+  - [ ] survey page, complete a survey
+
+- [x] rename header to headers?
+- [no] slug-store to mip
 
 ## Introduction
 This document will be split into 2 parts. The agent, which is the hoon code and

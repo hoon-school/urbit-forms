@@ -18,7 +18,7 @@
 +$  state-1
   $:
     %1 
-    =header
+    =headers
     =stuffing
     =slug-store
     =pending
